@@ -8,5 +8,5 @@ fun header(algorithm: String): String {
 }
 
 fun payload(text: String): String {
-	return """{"text": "$text"}""".encodeToByteArray().toBase64()
+	return """{"data": "$text"}""".encodeToByteArray().toBase64()
 }
