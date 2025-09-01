@@ -11,9 +11,9 @@ import dio.security.crypto.DigestSize
 
 @Composable
 fun KeyAndAlgorithmDropdowns(
+	algorithms: List<Algorithm>,
 	digestSizes: List<DigestSize>,
 	selectedDigestSize: DigestSize,
-	algorithms: List<Algorithm>,
 	selectedAlgorithm: Algorithm,
 	onSelectedKeySize: (DigestSize) -> Unit,
 	onSelectedAlgorithm: (Algorithm) -> Unit

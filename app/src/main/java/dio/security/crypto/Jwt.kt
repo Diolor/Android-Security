@@ -1,6 +1,7 @@
 package dio.security.crypto
 
 import android.util.Log
+import dio.security.crypto.Algorithm.ECDSA
 import dio.security.serialization.header
 import dio.security.serialization.payload
 import java.security.PrivateKey
@@ -14,23 +15,21 @@ object Jwt {
 	 * Create a JWT (JSON Web Token) using the specified algorithm, digest size, private key, and text to sign.
 	 */
 	fun create(
-		javaAlgorithm: String,
-		digestSize: DigestSize,
-		algorithm: Algorithm,
+		algorithm: SelectedAlgorithm,
 		privateKey: PrivateKey,
 		textToSign: String
 	): String {
-		val headerEncoded = header(algorithmToJwtSignature(digestSize, algorithm))
+		val headerEncoded = header(algorithm.getJwtName())
 		val payloadEncoded = payload(textToSign)
 
 		val jwsArray = Signature.sign(
-			algorithm = javaAlgorithm,
+			algorithm = algorithm,
 			privateKey = privateKey,
 			dataToSign = "$headerEncoded.$payloadEncoded".encodeToByteArray()
 		)
 
-		val jws = if (algorithm == Algorithm.ECDSA) {
-			val rawLen = when (digestSize) {
+		val jws = if (algorithm.algorithm == ECDSA) {
+			val rawLen = when (algorithm.digestSize) {
 				DigestSize.DigestSize256 -> 32
 				DigestSize.DigestSize384 -> 48
 				DigestSize.DigestSize512 -> 66 // P‑521 produces 521‑bit keys, which need 66 bytes

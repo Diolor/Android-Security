@@ -4,22 +4,6 @@ import android.util.Base64
 import java.security.PublicKey
 
 /**
- * Convert algorithm and digest size to Java Signature format
- * Example: SHA256withRSA
- */
-fun algorithmToJavaSignature(digestSize: DigestSize, algorithm: Algorithm): String {
-	return "SHA${digestSize.name}with${algorithm.name}"
-}
-
-/**
- * Based on rfc7518
- * https://www.rfc-editor.org/rfc/rfc7518.html#section-3
- */
-fun algorithmToJwtSignature(digestSize: DigestSize, algorithm: Algorithm): String {
-	return "${algorithm.jwtFamily}${digestSize.name}"
-}
-
-/**
  * Convert ByteArray to Base64 URL Safe without padding
  */
 fun ByteArray.toBase64(): String {
