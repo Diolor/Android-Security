@@ -45,22 +45,45 @@ object Jwt {
 		}
 	}
 
-	// FIXME: 512 crashes
+	/**
+	 * Convert the algorithm and digest size to the corresponding JWT signature string.
+	 *
+	 * TODO: Works but maybe use a library for this.
+	 */
 	private fun derToRawEcdsa(derSig: ByteArray, rawLen: Int): ByteArray {
-		var offset = 3                                     // skip 0x30, totalLen, 0x02
-		val rLen = derSig[offset].toInt() and 0xFF        // length of r
-		offset++
-		val r = derSig.copyOfRange(offset, offset + rLen) // read r
-		offset += rLen                                    // move to 0x02
-		offset++                                          // skip 0x02 tag
-		val sLen = derSig[offset].toInt() and 0xFF        // length of s
-		offset++
-		val s = derSig.copyOfRange(offset, offset + sLen) // read s
+		var offset = 0
 
-		// allocate fixed‑length buffers for r and s
+		// Expect 0x30 for SEQUENCE tag
+		require(derSig[offset] == 0x30.toByte()) { "Not a DER ECDSA signature" }
+		offset++
+
+		// Read and skip the DER length field (handles short and long forms)
+		val lengthByte = derSig[offset].toInt() and 0xFF
+		offset++
+		if (lengthByte and 0x80 != 0) {
+			// Long form: low 7 bits give the number of length bytes
+			val numLenBytes = lengthByte and 0x7F
+			offset += numLenBytes
+		}
+
+		// Read the r component
+		require(derSig[offset] == 0x02.toByte()) { "Expected INTEGER tag for r" }
+		offset++
+		val rLen = derSig[offset].toInt() and 0xFF
+		offset++
+		val r = derSig.copyOfRange(offset, offset + rLen)
+		offset += rLen
+
+		// Read the s component
+		require(derSig[offset] == 0x02.toByte()) { "Expected INTEGER tag for s" }
+		offset++
+		val sLen = derSig[offset].toInt() and 0xFF
+		offset++
+		val s = derSig.copyOfRange(offset, offset + sLen)
+
+		// Pad r and s on the left to rawLen and concatenate
 		val rRaw = ByteArray(rawLen)
 		val sRaw = ByteArray(rawLen)
-		// copy r and s into the rightmost portion of the buffers
 		System.arraycopy(
 			r,
 			maxOf(0, r.size - rawLen),
