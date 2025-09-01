@@ -101,8 +101,17 @@ class MainActivity : ComponentActivity() {
 						var keyPair by remember(selectedAlgorithm) {
 							mutableStateOf(generateRSACert(selectedAlgorithm))
 						}
+						// Can be online tested with https://8gwifi.org/rsasignverifyfunctions.jsp
 						var signed by remember(selectedAlgorithm, keyPair.private, clearText) {
-							mutableStateOf(sign(selectedAlgorithm, keyPair.private, clearText.toByteArray()))
+							mutableStateOf(
+								sign(selectedAlgorithm, keyPair.private, clearText.toByteArray())
+							)
+						}
+						// Can be online tested with https://jwt.io/#debugger-io
+						var jwt by remember(selectedAlgorithm, keyPair.private, clearText) {
+							mutableStateOf(
+								Jwt.create(selectedAlgorithm, keyPair.private, clearText)
+							)
 						}
 						var verified by remember(selectedAlgorithm, keyPair.public, signed) {
 							mutableStateOf(
@@ -148,31 +157,16 @@ class MainActivity : ComponentActivity() {
 								feedbackMessage = "Cleartext copied to clipboard",
 								textToCopy = clearText
 							)
-
 							val publicSignature = keyPair.public.toPublicSignature()
 							ClipboardText(
 								textToDisplay = "Public key:\n$publicSignature",
 								textToCopy = publicSignature
 							)
-
 							val digestText = remember(signed) { signed.toBase64() }
 							ClipboardText(
 								textToDisplay = "Digest:\n${digestText}",
 								textToCopy = digestText
 							)
-							var jwt by remember(
-								selectedAlgorithm,
-								keyPair.private,
-								clearText
-							) {
-								mutableStateOf(
-									Jwt.create(
-										algorithm = selectedAlgorithm,
-										privateKey = keyPair.private,
-										textToSign = clearText
-									)
-								)
-							}
 							ClipboardText(
 								textToDisplay = "JWT:\n$jwt",
 								textToCopy = jwt
