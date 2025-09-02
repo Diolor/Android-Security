@@ -34,10 +34,10 @@ object Jwt {
 				DigestSize.DigestSize384 -> 48
 				DigestSize.DigestSize512 -> 66 // P‑521 produces 521‑bit keys, which need 66 bytes
 			}
-			derToRawEcdsa(jwsArray, rawLen).toBase64()
+			derToRawEcdsa(jwsArray, rawLen)
 		} else {
-			jwsArray.toBase64()
-		}
+			jwsArray
+		}.toBase64JWTSpecs()
 
 		return "$headerEncoded.$payloadEncoded.$jws".also {
 			Log.d("JWT", "https://jwt.io/#debugger-io?token=$it")

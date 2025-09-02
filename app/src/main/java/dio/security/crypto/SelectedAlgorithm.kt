@@ -50,4 +50,15 @@ data class SelectedAlgorithm(
 			)
 		}
 	}
+
+	/**
+	 * Returns extra information about the selected curve or digest size.
+	 */
+	fun extraInformation(): String {
+		return when (val spec = getAlgorithmParameterSpec()) {
+			is ECGenParameterSpec -> spec.name.let { "Curve: $it" }
+			is RSAKeyGenParameterSpec -> spec.keysize.let { "Key size: $it" }
+			else -> ""
+		}
+	}
 }

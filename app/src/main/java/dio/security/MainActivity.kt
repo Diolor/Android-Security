@@ -101,7 +101,7 @@ class MainActivity : ComponentActivity() {
 						var keyPair by remember(selectedAlgorithm) {
 							mutableStateOf(generateRSACert(selectedAlgorithm))
 						}
-						// Can be online tested with https://8gwifi.org/rsasignverifyfunctions.jsp
+						// RSA & ECDSA be online tested with https://emn178.github.io/online-tools/ecdsa/verify/
 						var signed by remember(selectedAlgorithm, keyPair.private, clearText) {
 							mutableStateOf(
 								sign(selectedAlgorithm, keyPair.private, clearText.toByteArray())
@@ -142,7 +142,7 @@ class MainActivity : ComponentActivity() {
 							onSelectedAlgorithm = { userSelectedAlgorithm = it }
 						)
 						Text(
-							text = "Algorithm: ${selectedAlgorithm.getJavaSignatureName()} (${selectedAlgorithm.getJwtName()})",
+							text = "Algorithm: ${selectedAlgorithm.getJavaSignatureName()} (${selectedAlgorithm.getJwtName()})\n${selectedAlgorithm.extraInformation()}",
 							modifier = Modifier.padding(vertical = 16.dp)
 						)
 
