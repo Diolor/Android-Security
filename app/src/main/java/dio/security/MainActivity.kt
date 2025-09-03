@@ -113,13 +113,13 @@ class MainActivity : ComponentActivity() {
 							var keyPair by remember(selectedAlgorithm) {
 								mutableStateOf(generateRSACert(selectedAlgorithm))
 							}
-							// RSA & ECDSA be online tested with https://emn178.github.io/online-tools/ecdsa/verify/
+							// RSA & ECDSA digests can be online tested with https://emn178.github.io/online-tools/ecdsa/verify/
 							var signed by remember(selectedAlgorithm, keyPair.private, clearText) {
 								mutableStateOf(
 									sign(selectedAlgorithm, keyPair.private, clearText.toByteArray())
 								)
 							}
-							// Can be online tested with https://jwt.io/#debugger-io
+							// JWT can be online tested with https://jwt.io/#debugger-io
 							var jwt by remember(selectedAlgorithm, keyPair.private, clearText) {
 								mutableStateOf(
 									Jwt.create(selectedAlgorithm, keyPair.private, clearText)
