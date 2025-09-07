@@ -67,10 +67,7 @@ private fun ASN1Sequence.decode(): Map<Int, Any> {
 				in INTEGERS -> map[element.tagNo] = element.baseObject as ASN1Integer
 				in OCTET_STRINGS -> {
 					val bytes = (element.baseObject as DEROctetString).octets
-					val base64 = Base64.encodeToString(bytes, Base64.NO_WRAP)
-
-					val decoded: ByteArray = Base64.decode(base64, Base64.NO_WRAP)
-					map[element.tagNo] = String(decoded, StandardCharsets.UTF_8)
+					map[element.tagNo] = String(bytes, StandardCharsets.UTF_8)
 				}
 //				in SET_OF_INTEGERS -> {
 //					map[element.tagNo] = (element.baseObject as ASN1Sequence)

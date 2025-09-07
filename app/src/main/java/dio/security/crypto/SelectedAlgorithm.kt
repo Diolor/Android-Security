@@ -4,6 +4,7 @@ import dio.security.crypto.Algorithm.*
 import dio.security.crypto.DigestSize.DigestSize256
 import dio.security.crypto.DigestSize.DigestSize384
 import dio.security.crypto.DigestSize.DigestSize512
+import java.security.SecureRandom
 import java.security.spec.AlgorithmParameterSpec
 import java.security.spec.ECGenParameterSpec
 import java.security.spec.RSAKeyGenParameterSpec
@@ -15,6 +16,15 @@ data class SelectedAlgorithm(
 	val algorithm: Algorithm,
 	val digestSize: DigestSize
 ) {
+
+	/**
+	 * Randomly generated attestation challenge to be used when generating the key pair.
+	 *
+	 * Normally the challenge should come from the server to ensure the attestation is for this specific request.
+	 * Here we generate a random one for demonstration purposes.
+	 */
+	val attestationChallenge = ByteArray(32).also { SecureRandom().nextBytes(it) }
+
 	/**
 	 * Returns the [java.security.Signature] representation of the selected algorithm and digest size.
 	 * Example: SHA256withRSA
