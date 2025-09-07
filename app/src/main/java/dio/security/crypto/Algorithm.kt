@@ -17,8 +17,7 @@ sealed class Algorithm(
 	 * Compliant with Java Security Standard Algorithm Names Specification.
 	 */
 	val javaStandardName: String
-) :
-		DropdownOption {
+) : DropdownOption {
 	override fun displayName() = name
 
 	object ECDSA : Algorithm("ECDSA", "ES", KEY_ALGORITHM_EC)
