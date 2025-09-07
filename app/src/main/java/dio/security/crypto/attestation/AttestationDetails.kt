@@ -10,22 +10,20 @@ data class AttestationDetails(
 	val keymasterSecurityLevel: String,
 	val attestationChallenge: String,
 	val uniqueId: String,
-	// TODO the list is incomplete
 	val softwareEnforced: Map<Int, Any>,
-	// TODO the list is incomplete
 	val hardwareEnforced: Map<Int, Any>
-){
+) {
 
 	override fun toString(): String {
 		return """
-						attestationVersion: $attestationVersion
-						attestationSecurityLevel: $attestationSecurityLevel
-						keymasterVersion: $keymasterVersion
-						keymasterSecurityLevel: $keymasterSecurityLevel
-						attestationChallenge: $attestationChallenge
-						uniqueId: $uniqueId
-						softwareEnforced: $softwareEnforced
-						hardwareEnforced: $hardwareEnforced
+attestationVersion: $attestationVersion
+attestationSecurityLevel: $attestationSecurityLevel
+keymasterVersion: $keymasterVersion
+keymasterSecurityLevel: $keymasterSecurityLevel
+attestationChallenge: $attestationChallenge
+uniqueId: $uniqueId
+softwareEnforced: ${softwareEnforced.entries.joinToString(separator = "\n\t\t")}
+hardwareEnforced: ${hardwareEnforced.entries.joinToString(separator = "\n\t\t")}
 				""".trimIndent()
 	}
 }

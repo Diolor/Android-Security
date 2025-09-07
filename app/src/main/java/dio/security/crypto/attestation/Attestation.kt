@@ -8,7 +8,8 @@ import org.bouncycastle.asn1.ASN1OctetString
 import org.bouncycastle.asn1.ASN1Sequence
 import org.bouncycastle.asn1.ASN1TaggedObject
 import org.bouncycastle.asn1.DEROctetString
-import java.nio.charset.StandardCharsets
+import org.bouncycastle.asn1.DLSet
+import java.nio.charset.StandardCharsets.UTF_8
 import java.security.cert.X509Certificate
 
 private const val ATTESTATION_OID = "1.3.6.1.4.1.11129.2.1.17"
@@ -17,9 +18,13 @@ private val INTEGERS =
 private val SET_OF_INTEGERS = setOf(1, 4, 5, 6, 203)
 private val NULLABLES = setOf(7, 303, 305, 503, 506, 507, 508, 509, 720)
 private val OCTET_STRINGS = setOf(
-	//709, // ignore for now
 	710, 711, 712, 713, 714, 715, 716, 717, 723, 724
 )
+private const val APPLICATION_ID = 709
+
+private fun ASN1OctetString.toUtf8String(): String = String(octets, UTF_8)
+
+private fun ASN1OctetString.toBase64(): String = Base64.encodeToString(octets, Base64.NO_WRAP)
 
 /**
  *  Minimal “structure sanity check”
@@ -65,21 +70,52 @@ private fun ASN1Sequence.decode(): Map<Int, Any> {
 		.forEach { element ->
 			when (element.tagNo) {
 				in INTEGERS -> map[element.tagNo] = element.baseObject as ASN1Integer
-				in OCTET_STRINGS -> {
-					val bytes = (element.baseObject as DEROctetString).octets
-					map[element.tagNo] = String(bytes, StandardCharsets.UTF_8)
-				}
-//				in SET_OF_INTEGERS -> {
-//					map[element.tagNo] = (element.baseObject as ASN1Sequence)
-//						.objects
-//						.toList()
-//						.map { it as ASN1Integer }
-//						.toSet()
-//				}
+				in OCTET_STRINGS -> map[element.tagNo] =
+					(element.baseObject as ASN1OctetString).toUtf8String()
 
-//				in NULLABLES -> map[element.tagNo] = element.baseObject?.toString() ?: "NULL"
+				in SET_OF_INTEGERS -> map[element.tagNo] = (element.baseObject as DLSet)
+					.objects
+					.toList()
+					.map { it as ASN1Integer }
+					.toSet()
+
+				in NULLABLES -> map[element.tagNo] = element.baseObject?.toString() ?: "NULL"
+				APPLICATION_ID -> map[element.tagNo] =
+					(element.baseObject as ASN1OctetString).octets.extractAttestationApplicationId()
 			}
 		}
 
 	return map.toMap()
 }
+
+private fun ByteArray.extractAttestationApplicationId(): AttestationApplicationId {
+	// The baseObject is an ASN1OctetString which contains a DER-encoded ASN.1 sequence
+	// See https://source.android.com/docs/security/features/keystore/attestation#attestationapplicationid-schema
+	return ASN1InputStream(this).use { appIdStream ->
+		val appIdSequence = (appIdStream.readObject() as ASN1Sequence).objects.toList()
+		println(appIdSequence)
+
+		val packageInfos = (appIdSequence[0] as DLSet).objects
+			.toList()
+			.filterIsInstance<ASN1Sequence>()
+			.map { packageInfoEntry ->
+				println(packageInfoEntry)
+				val packageNameOctets = packageInfoEntry.getObjectAt(0) as DEROctetString
+				val versionInteger = packageInfoEntry.getObjectAt(1) as ASN1Integer
+				AttestationPackageInfo(
+					packageName = packageNameOctets.toUtf8String(),
+					version = versionInteger.value.toLong()
+				)
+			}
+
+		val signatureDigests = (appIdSequence[1] as DLSet)
+			.objects
+			.toList()
+			.filterIsInstance<ASN1OctetString>()
+			.map { it.toBase64() }
+			.toSet()
+
+		AttestationApplicationId(packageInfos, signatureDigests)
+	}
+}
+

@@ -199,7 +199,7 @@ class MainActivity : ComponentActivity() {
 								)
 
 								Text(
-									text = "Attestation details",
+									text = "Certificate attestation details",
 									style = MaterialTheme.typography.titleMedium,
 								)
 								Text(
