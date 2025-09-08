@@ -101,6 +101,9 @@ class MainActivity : ComponentActivity() {
 							val keyPair = remember(selectedAlgorithm) {
 								keyManager.generateAsymmetricCert(selectedAlgorithm)
 							}
+							val hardwareBackedKey = remember(keyPair.private) {
+								keyManager.isHardwareBacked(keyPair.private)
+							}
 							val publicSignature = remember(keyPair.public) { keyPair.public.toPem() }
 							// RSA & ECDSA digests can be online tested with https://emn178.github.io/online-tools/ecdsa/verify/
 							val signed = remember(selectedAlgorithm, keyPair.private, clearText) {
@@ -121,14 +124,12 @@ class MainActivity : ComponentActivity() {
 							}
 
 							// Attestation
-							val hardwareBackedKey = remember(keyPair.private) {
-								keyManager.isHardwareBacked(keyPair.private)
-							}
-							// Attestation can be online tested with https://www.sslshopper.com/certificate-decoder.html
 							val challengeText = remember(keyPair) {
 								selectedAlgorithm.attestationChallenge.toBase64()
 							}
+							// Attestation can be online tested with https://certlogik.com/decoder/
 							val attestationPemChain = remember(keyPair) { keyManager.getAttestationChainPem() }
+							println(attestationPemChain)
 							val attestationDetails = remember(keyPair) { keyManager.getAttestationDetails() }
 
 							OutlinedTextField(
