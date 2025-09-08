@@ -39,7 +39,7 @@ fun ClipboardText(
 	) {
 		Text(
 			text = header,
-			style = MaterialTheme.typography.titleLarge,
+			style = MaterialTheme.typography.titleMedium,
 			modifier = modifier
 		)
 

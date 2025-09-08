@@ -1,7 +1,7 @@
 package dio.security
 
+import android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES
 import android.os.Bundle
-import android.util.Base64
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -36,6 +36,7 @@ import dio.security.ui.ClipboardText
 import dio.security.ui.KeyAndAlgorithmDropdowns
 import dio.security.ui.VerificationButtons
 import dio.security.ui.theme.SecurityTheme
+import java.security.MessageDigest
 import java.security.Security
 
 class MainActivity : ComponentActivity() {
@@ -52,6 +53,20 @@ class MainActivity : ComponentActivity() {
 	private val algorithms = Algorithm.all
 
 	private val keyManager = KeyManager(this)
+
+	private val appSignaturesSha256: List<String> by lazy {
+		val certs = packageManager.getPackageInfo(packageName, GET_SIGNING_CERTIFICATES)
+			.signingInfo
+			?.signingCertificateHistory
+
+		certs
+			?.map { signature ->
+				val digest = MessageDigest.getInstance("SHA-256")
+				val sha256 = digest.digest(signature.toByteArray())
+				sha256.joinToString(":") { b -> "%02X".format(b) }
+			}
+			?: emptyList()
+	}
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
@@ -177,7 +192,7 @@ class MainActivity : ComponentActivity() {
 
 								Text(
 									text = "Key Attestation",
-									style = MaterialTheme.typography.headlineLarge,
+									style = MaterialTheme.typography.headlineMedium,
 									modifier = Modifier.padding(vertical = 16.dp)
 								)
 
@@ -194,27 +209,37 @@ class MainActivity : ComponentActivity() {
 								)
 
 								HorizontalDivider()
+
+								Text(
+									text = "Certificate attestation details",
+									style = MaterialTheme.typography.titleMedium,
+									modifier = Modifier.padding(top = 16.dp)
+								)
+								Text(
+									text = "$attestationDetails",
+									modifier = Modifier.padding(bottom = 16.dp)
+								)
 								Text(
 									text = "Attestation challenge verified in certificate:${attestationDetails.attestationChallenge == challengeText}",
 									modifier = Modifier.padding(vertical = 16.dp)
 								)
 
 								Text(
-									text = "Certificate attestation details",
+									text = "Hex SHA-256 digest that the app was signed with",
 									style = MaterialTheme.typography.titleMedium,
+									modifier = Modifier.padding(top = 16.dp)
 								)
+								val appSigningCertificates = attestationDetails.getAppSigningCertificates()
 								Text(
-									text = "$attestationDetails",
+									text = appSigningCertificates
+										.joinToString(separator = "\n"),
 									modifier = Modifier.padding(bottom = 16.dp)
 								)
 
+								val matchesSignature =
+									appSignaturesSha256.union(appSigningCertificates).isNotEmpty()
 								Text(
-									text = "Hex SHA-256 digest that the app was signed with",
-									style = MaterialTheme.typography.titleMedium,
-								)
-								Text(
-									text = attestationDetails.getAppSigningCertificates()
-										.joinToString(separator = "\n"),
+									text = "Attestation certificates match app signatures: $matchesSignature",
 									modifier = Modifier.padding(bottom = 16.dp)
 								)
 							}
