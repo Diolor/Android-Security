@@ -93,13 +93,11 @@ private fun ByteArray.extractAttestationApplicationId(): AttestationApplicationI
 	// See https://source.android.com/docs/security/features/keystore/attestation#attestationapplicationid-schema
 	return ASN1InputStream(this).use { appIdStream ->
 		val appIdSequence = (appIdStream.readObject() as ASN1Sequence).objects.toList()
-		println(appIdSequence)
 
 		val packageInfos = (appIdSequence[0] as DLSet).objects
 			.toList()
 			.filterIsInstance<ASN1Sequence>()
 			.map { packageInfoEntry ->
-				println(packageInfoEntry)
 				val packageNameOctets = packageInfoEntry.getObjectAt(0) as DEROctetString
 				val versionInteger = packageInfoEntry.getObjectAt(1) as ASN1Integer
 				AttestationPackageInfo(

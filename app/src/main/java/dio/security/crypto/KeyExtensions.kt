@@ -22,7 +22,6 @@ fun PrivateKey.isHardwareBacked(provider: String): Boolean {
 	val keyInfo = getKeyInfo(provider)
 
 	return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-		println("Key security level: ${keyInfo.securityLevel}")
 		keyInfo.securityLevel in setOf(
 			SECURITY_LEVEL_TRUSTED_ENVIRONMENT,
 			SECURITY_LEVEL_STRONGBOX

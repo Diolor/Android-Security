@@ -1,6 +1,7 @@
 package dio.security
 
 import android.os.Bundle
+import android.util.Base64
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -204,6 +205,16 @@ class MainActivity : ComponentActivity() {
 								)
 								Text(
 									text = "$attestationDetails",
+									modifier = Modifier.padding(bottom = 16.dp)
+								)
+
+								Text(
+									text = "Hex SHA-256 digest that the app was signed with",
+									style = MaterialTheme.typography.titleMedium,
+								)
+								Text(
+									text = attestationDetails.getAppSigningCertificates()
+										.joinToString(separator = "\n"),
 									modifier = Modifier.padding(bottom = 16.dp)
 								)
 							}
