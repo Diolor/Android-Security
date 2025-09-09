@@ -19,10 +19,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.liveData
 import dio.security.crypto.Algorithm
 import dio.security.crypto.DigestSize
 import dio.security.crypto.KeyManager
@@ -36,6 +39,11 @@ import dio.security.ui.ClipboardText
 import dio.security.ui.KeyAndAlgorithmDropdowns
 import dio.security.ui.VerificationButtons
 import dio.security.ui.theme.SecurityTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import java.security.KeyPair
 import java.security.MessageDigest
 import java.security.Security
 
@@ -99,6 +107,7 @@ class MainActivity : ComponentActivity() {
 								mutableStateOf(SelectedAlgorithm(userSelectedAlgorithm, userSelectedDigestSize))
 							}
 							val keyPair = remember(selectedAlgorithm) {
+								// TODO move this to background
 								keyManager.generateAsymmetricCert(selectedAlgorithm)
 							}
 							val hardwareBackedKey = remember(keyPair.private) {
