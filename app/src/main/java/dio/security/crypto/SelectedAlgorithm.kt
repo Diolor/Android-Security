@@ -4,10 +4,16 @@ import dio.security.crypto.Algorithm.*
 import dio.security.crypto.DigestSize.DigestSize256
 import dio.security.crypto.DigestSize.DigestSize384
 import dio.security.crypto.DigestSize.DigestSize512
+import java.security.KeyPair
 import java.security.SecureRandom
 import java.security.spec.AlgorithmParameterSpec
 import java.security.spec.ECGenParameterSpec
 import java.security.spec.RSAKeyGenParameterSpec
+
+data class CryptoConfiguration(
+	val selectedAlgorithm: SelectedAlgorithm,
+	val keyPair: KeyPair
+)
 
 /**
  * Selected algorithm and digest size for signing and verification.

@@ -1,6 +1,7 @@
 package dio.security.crypto.attestation
 
 import android.util.Base64
+import org.bouncycastle.asn1.ASN1Boolean
 import org.bouncycastle.asn1.ASN1Enumerated
 import org.bouncycastle.asn1.ASN1InputStream
 import org.bouncycastle.asn1.ASN1Integer
@@ -13,6 +14,8 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.security.cert.X509Certificate
 
 private const val ATTESTATION_OID = "1.3.6.1.4.1.11129.2.1.17"
+private const val ROOT_OF_TRUST = 704
+private const val APPLICATION_ID = 709
 private val INTEGERS =
 	setOf(2, 3, 8, 10, 200, 400, 401, 402, 405, 502, 504, 505, 701, 702, 705, 706, 718, 719)
 private val SET_OF_INTEGERS = setOf(1, 4, 5, 6, 203)
@@ -20,7 +23,6 @@ private val NULLABLES = setOf(7, 303, 305, 503, 506, 507, 508, 509, 720)
 private val OCTET_STRINGS = setOf(
 	710, 711, 712, 713, 714, 715, 716, 717, 723, 724
 )
-private const val APPLICATION_ID = 709
 
 private fun ASN1OctetString.toUtf8String(): String = String(octets, UTF_8)
 
@@ -81,17 +83,37 @@ private fun ASN1Sequence.decode(): Map<Int, Any> {
 
 				in NULLABLES -> map[element.tagNo] = element.baseObject?.toString() ?: "NULL"
 				APPLICATION_ID -> map[element.tagNo] =
-					(element.baseObject as ASN1OctetString).octets.extractAttestationApplicationId()
+					(element.baseObject as ASN1OctetString).extractAttestationApplicationId()
+
+				ROOT_OF_TRUST -> {
+					map[element.tagNo] = (element.baseObject as ASN1Sequence).extractRootOfTrust()
+				}
 			}
 		}
 
 	return map.toMap()
 }
 
-private fun ByteArray.extractAttestationApplicationId(): AttestationApplicationId {
+private fun ASN1Sequence.extractRootOfTrust(): RootOfTrust {
+	val objects = objects.toList()
+	val verifiedBootKey = (objects[0] as ASN1OctetString).toBase64()
+	val deviceLocked = (objects[1] as ASN1Boolean).isTrue
+	val verifiedBootState = when ((objects[2] as ASN1Enumerated).value.toInt()) {
+		0 -> "Verified"
+		1 -> "Self-signed"
+		2 -> "Unverified"
+		3 -> "Failed"
+		else -> "Unknown"
+	}
+	val verifiedBootHash = (objects[3] as ASN1OctetString).toBase64()
+
+	return RootOfTrust(verifiedBootKey, deviceLocked, verifiedBootState, verifiedBootHash)
+}
+
+private fun ASN1OctetString.extractAttestationApplicationId(): AttestationApplicationId {
 	// The baseObject is an ASN1OctetString which contains a DER-encoded ASN.1 sequence
 	// See https://source.android.com/docs/security/features/keystore/attestation#attestationapplicationid-schema
-	return ASN1InputStream(this).use { appIdStream ->
+	return ASN1InputStream(octets).use { appIdStream ->
 		val appIdSequence = (appIdStream.readObject() as ASN1Sequence).objects.toList()
 
 		val packageInfos = (appIdSequence[0] as DLSet).objects

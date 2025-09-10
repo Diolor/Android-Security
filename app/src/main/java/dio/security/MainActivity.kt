@@ -24,9 +24,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.liveData
 import dio.security.crypto.Algorithm
+import dio.security.crypto.CryptoConfiguration
 import dio.security.crypto.DigestSize
 import dio.security.crypto.KeyManager
 import dio.security.crypto.Jwt
@@ -40,10 +39,7 @@ import dio.security.ui.KeyAndAlgorithmDropdowns
 import dio.security.ui.VerificationButtons
 import dio.security.ui.theme.SecurityTheme
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import java.security.KeyPair
 import java.security.MessageDigest
 import java.security.Security
 
@@ -103,155 +99,184 @@ class MainActivity : ComponentActivity() {
 							var userSelectedDigestSize by remember { mutableStateOf(digestSizes.first()) }
 
 							// Generated values
-							val selectedAlgorithm by remember(userSelectedAlgorithm, userSelectedDigestSize) {
-								mutableStateOf(SelectedAlgorithm(userSelectedAlgorithm, userSelectedDigestSize))
-							}
-							val keyPair = remember(selectedAlgorithm) {
-								// TODO move this to background
-								keyManager.generateAsymmetricCert(selectedAlgorithm)
-							}
-							val hardwareBackedKey = remember(keyPair.private) {
-								keyManager.isHardwareBacked(keyPair.private)
-							}
-							val publicSignature = remember(keyPair.public) { keyPair.public.toPem() }
-							// RSA & ECDSA digests can be online tested with https://emn178.github.io/online-tools/ecdsa/verify/
-							val signed = remember(selectedAlgorithm, keyPair.private, clearText) {
-								sign(selectedAlgorithm, keyPair.private, clearText.toByteArray())
-							}
-							val digestText = remember(signed) { signed.toBase64() }
-							// JWT can be online tested with https://jwt.io/#debugger-io
-							val jwt = remember(selectedAlgorithm, keyPair.private, clearText) {
-								Jwt.create(selectedAlgorithm, keyPair.private, clearText)
-							}
-							val verified = remember(selectedAlgorithm, keyPair.public, signed) {
-								verify(
-									algorithm = selectedAlgorithm,
-									publicKey = keyPair.public,
-									signedData = signed,
-									dataToVerify = clearText.toByteArray()
-								)
-							}
-
-							// Attestation
-							val challengeText = remember(keyPair) {
-								selectedAlgorithm.attestationChallenge.toBase64()
-							}
-							// Attestation can be online tested with https://certlogik.com/decoder/
-							val attestationPemChain = remember(keyPair) { keyManager.getAttestationChainPem() }
-							println(attestationPemChain)
-							val attestationDetails = remember(keyPair) { keyManager.getAttestationDetails() }
-
-							OutlinedTextField(
-								value = clearText,
-								onValueChange = { newText -> clearText = newText },
-								label = { Text("Text to sign") },
-								modifier = Modifier
-									.fillMaxWidth()
-									.padding(bottom = 8.dp)
-							)
-
-							KeyAndAlgorithmDropdowns(
-								algorithms = algorithms,
-								digestSizes = digestSizes,
-								selectedDigestSize = userSelectedDigestSize,
-								selectedAlgorithm = userSelectedAlgorithm,
-								onSelectedKeySize = { userSelectedDigestSize = it },
-								onSelectedAlgorithm = { userSelectedAlgorithm = it }
-							)
-							Text(
-								text = "Algorithm: ${selectedAlgorithm.getJavaSignatureName()} (${selectedAlgorithm.getJwtName()})" +
-										"\n${selectedAlgorithm.extraInformation()}"
-										+ "\nKey is hardware backed: $hardwareBackedKey",
-								modifier = Modifier.padding(vertical = 16.dp)
-							)
-
-							Column(
-								modifier = Modifier
-									.verticalScroll(rememberScrollState())
-									.fillMaxSize()
+							val cryptoConfiguration by produceState<CryptoConfiguration?>(
+								null,
+								userSelectedAlgorithm,
+								userSelectedDigestSize
 							) {
+								withContext(Dispatchers.IO) {
+									val selectedAlgorithm =
+										SelectedAlgorithm(userSelectedAlgorithm, userSelectedDigestSize)
+									val keyPair = keyManager.generateAsymmetricCert(selectedAlgorithm)
 
-								ClipboardText(
-									header = "Cleartext",
-									textToDisplay = clearText,
-									textToCopy = clearText
+									value = CryptoConfiguration(selectedAlgorithm, keyPair)
+								}
+							}
+
+							cryptoConfiguration?.let { (selectedAlgorithm, keyPair) ->
+								val hardwareBackedKey = remember(keyPair.private) {
+									keyManager.isHardwareBacked(keyPair.private)
+								}
+								val publicSignature = remember(keyPair.public) { keyPair.public.toPem() }
+								// RSA & ECDSA digests can be online tested with https://emn178.github.io/online-tools/ecdsa/verify/
+								val signed = remember(selectedAlgorithm, keyPair.private, clearText) {
+									sign(selectedAlgorithm, keyPair.private, clearText.toByteArray())
+								}
+								val digestText = remember(signed) { signed.toBase64() }
+								// JWT can be online tested with https://jwt.io/#debugger-io
+								val jwt = remember(selectedAlgorithm, keyPair.private, clearText) {
+									Jwt.create(selectedAlgorithm, keyPair.private, clearText)
+								}
+								val verified = remember(selectedAlgorithm, keyPair.public, signed) {
+									verify(
+										algorithm = selectedAlgorithm,
+										publicKey = keyPair.public,
+										signedData = signed,
+										dataToVerify = clearText.toByteArray()
+									)
+								}
+
+								// Attestation
+								val challengeText = remember(keyPair) {
+									selectedAlgorithm.attestationChallenge.toBase64()
+								}
+								// Attestation can be online tested with https://certlogik.com/decoder/
+								val attestationPemChain = remember(keyPair) { keyManager.getAttestationChainPem() }
+								println(attestationPemChain)
+								val attestationDetails = remember(keyPair) { keyManager.getAttestationDetails() }
+
+								OutlinedTextField(
+									value = clearText,
+									onValueChange = { newText -> clearText = newText },
+									label = { Text("Text to sign") },
+									modifier = Modifier
+										.fillMaxWidth()
+										.padding(bottom = 8.dp)
 								)
-								ClipboardText(
-									header = "Public key",
-									textToDisplay = "${publicSignature.take(100)} [...]",
-									textToCopy = publicSignature
-								)
-								ClipboardText(
-									header = "Digest",
-									textToDisplay = digestText,
-									textToCopy = digestText
-								)
-								ClipboardText(
-									header = "JWT",
-									textToDisplay = jwt,
-									textToCopy = jwt
+
+								KeyAndAlgorithmDropdowns(
+									algorithms = algorithms,
+									digestSizes = digestSizes,
+									selectedDigestSize = userSelectedDigestSize,
+									selectedAlgorithm = userSelectedAlgorithm,
+									onSelectedKeySize = { userSelectedDigestSize = it },
+									onSelectedAlgorithm = { userSelectedAlgorithm = it }
 								)
 								Text(
-									text = "Verified digest successfully against public key: $verified",
-									modifier = Modifier.padding(bottom = 16.dp),
-								)
-
-								VerificationButtons()
-
-								HorizontalDivider()
-
-								Text(
-									text = "Key Attestation",
-									style = MaterialTheme.typography.headlineMedium,
+									text = "Algorithm: ${selectedAlgorithm.getJavaSignatureName()} (${selectedAlgorithm.getJwtName()})" +
+											"\n${selectedAlgorithm.extraInformation()}"
+											+ "\nKey is hardware backed: $hardwareBackedKey",
 									modifier = Modifier.padding(vertical = 16.dp)
 								)
 
-								ClipboardText(
-									header = "Attestation challenge (base64)",
-									textToDisplay = "(Random generated but it should normally come from BE)\n$challengeText",
-									textToCopy = challengeText
-								)
-								ClipboardText(
-									header = "Attestation Certificate chain\n(PEM, leaf -> root)",
-									textToDisplay = attestationPemChain.joinToString(separator = "\n\n")
-										.take(100) + "[...]",
-									textToCopy = attestationPemChain.joinToString("\n\n")
-								)
+								Column(
+									modifier = Modifier
+										.verticalScroll(rememberScrollState())
+										.fillMaxSize()
+								) {
 
-								HorizontalDivider()
+									ClipboardText(
+										header = "Cleartext",
+										textToDisplay = clearText,
+										textToCopy = clearText
+									)
+									ClipboardText(
+										header = "Public key",
+										textToDisplay = "${publicSignature.take(100)} [...]",
+										textToCopy = publicSignature
+									)
+									ClipboardText(
+										header = "Digest",
+										textToDisplay = digestText,
+										textToCopy = digestText
+									)
+									ClipboardText(
+										header = "JWT",
+										textToDisplay = jwt,
+										textToCopy = jwt
+									)
+									Text(
+										text = "Verified digest successfully against public key: $verified",
+										modifier = Modifier.padding(bottom = 16.dp),
+									)
 
-								Text(
-									text = "Certificate attestation details",
-									style = MaterialTheme.typography.titleMedium,
-									modifier = Modifier.padding(top = 16.dp)
-								)
-								Text(
-									text = "$attestationDetails",
-									modifier = Modifier.padding(bottom = 16.dp)
-								)
-								Text(
-									text = "Attestation challenge verified in certificate:${attestationDetails.attestationChallenge == challengeText}",
-									modifier = Modifier.padding(vertical = 16.dp)
-								)
+									VerificationButtons()
 
-								Text(
-									text = "Hex SHA-256 digest that the app was signed with",
-									style = MaterialTheme.typography.titleMedium,
-									modifier = Modifier.padding(top = 16.dp)
-								)
-								val appSigningCertificates = attestationDetails.getAppSigningCertificates()
-								Text(
-									text = appSigningCertificates
-										.joinToString(separator = "\n"),
-									modifier = Modifier.padding(bottom = 16.dp)
-								)
+									HorizontalDivider()
 
-								val matchesSignature =
-									appSignaturesSha256.union(appSigningCertificates).isNotEmpty()
-								Text(
-									text = "Attestation certificates match app signatures: $matchesSignature",
-									modifier = Modifier.padding(bottom = 16.dp)
-								)
+									Text(
+										text = "Key Attestation",
+										style = MaterialTheme.typography.headlineMedium,
+										modifier = Modifier.padding(vertical = 16.dp)
+									)
+
+									ClipboardText(
+										header = "Attestation challenge (base64)",
+										textToDisplay = "(Random generated but it should normally come from BE)\n$challengeText",
+										textToCopy = challengeText
+									)
+									ClipboardText(
+										header = "Attestation Certificate chain\n(PEM, leaf -> root)",
+										textToDisplay = attestationPemChain.joinToString(separator = "\n\n")
+											.take(100) + "[...]",
+										textToCopy = attestationPemChain.joinToString("\n\n")
+									)
+
+									HorizontalDivider()
+
+									Text(
+										text = "Certificate attestation details",
+										style = MaterialTheme.typography.titleMedium,
+										modifier = Modifier.padding(top = 16.dp)
+									)
+									Text(
+										text = "$attestationDetails",
+										modifier = Modifier.padding(bottom = 16.dp)
+									)
+									Text(
+										text = "Attestation challenge verified in certificate:${attestationDetails.attestationChallenge == challengeText}",
+										modifier = Modifier.padding(vertical = 16.dp)
+									)
+
+									Text(
+										text = "Hex SHA-256 digest that the app was signed with",
+										style = MaterialTheme.typography.titleMedium,
+										modifier = Modifier.padding(top = 16.dp)
+									)
+									val appSigningCertificates = attestationDetails.getAppSigningCertificates()
+									Text(
+										text = appSigningCertificates
+											.joinToString(separator = "\n"),
+										modifier = Modifier.padding(bottom = 16.dp)
+									)
+
+									attestationDetails.getRootOfTrust().forEach {
+										Text(
+											text = "Boot Hash",
+											style = MaterialTheme.typography.titleMedium,
+											modifier = Modifier.padding(top = 16.dp)
+										)
+										Text(
+											text = it.verifiedBootHash,
+										)
+										Text(
+											text = "Device locked: ${it.deviceLocked}\nVerified boot state: ${it.verifiedBootState}",
+											modifier = Modifier.padding(bottom = 16.dp)
+										)
+									}
+
+									Text(
+										text = "Attestation challenge verified in certificate:${attestationDetails.attestationChallenge == challengeText}",
+										modifier = Modifier.padding(vertical = 16.dp)
+									)
+
+									val matchesSignature =
+										appSignaturesSha256.union(appSigningCertificates).isNotEmpty()
+									Text(
+										text = "Attestation certificates match app signatures: $matchesSignature",
+										modifier = Modifier.padding(bottom = 16.dp)
+									)
+								}
 							}
 						}
 					}

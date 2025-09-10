@@ -28,13 +28,27 @@ data class AttestationDetails(
 			.flatten()
 	}
 
+	private fun Map<Int, Any>.getRootOfTrust(): List<RootOfTrust> {
+		return values.filterIsInstance<RootOfTrust>()
+	}
+
 	/**
 	 * Returns a list of SHA256 digests of the app's signing certificate(s) in hex format.
 	 */
-	fun getAppSigningCertificates(): List<String> {
-		val softwareEnforcedCertificates = softwareEnforced.getAppSigningCertificates()
-		val hardwareEnforcedCertificates = hardwareEnforced.getAppSigningCertificates()
-		return (softwareEnforcedCertificates + hardwareEnforcedCertificates).distinct()
+	fun getAppSigningCertificates() =
+		mergeDistinct(softwareEnforced, hardwareEnforced) { getAppSigningCertificates() }
+
+	fun getRootOfTrust() =
+		mergeDistinct(softwareEnforced, hardwareEnforced) { getRootOfTrust() }
+
+	private inline fun <reified T> mergeDistinct(
+		software: Map<Int, Any>,
+		hardware: Map<Int, Any>,
+		crossinline extractor: Map<Int, Any>.() -> List<T>
+	): List<T> {
+		val softwareValues = software.extractor()
+		val hardwareValues = hardware.extractor()
+		return (softwareValues + hardwareValues).distinct()
 	}
 
 	override fun toString(): String {
