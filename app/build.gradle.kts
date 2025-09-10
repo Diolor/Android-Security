@@ -48,7 +48,6 @@ dependencies {
 	implementation(libs.androidx.material3)
 	implementation(libs.bouncycastle.core)
 	implementation(libs.bouncycastle.pkixhelpers)
-	implementation(libs.androidx.lifecycle.livedata.ktx)
 	testImplementation(libs.junit)
 	androidTestImplementation(libs.androidx.junit)
 	androidTestImplementation(libs.androidx.espresso.core)
