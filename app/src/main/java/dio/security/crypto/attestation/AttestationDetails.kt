@@ -12,8 +12,8 @@ data class AttestationDetails(
 	val keymasterSecurityLevel: String,
 	val attestationChallenge: String,
 	val uniqueId: String,
-	val softwareEnforced: Map<Int, Any>,
-	val hardwareEnforced: Map<Int, Any>
+	val softwareEnforced: Map<Int, Any>, // TODO I don't like this Any
+	val hardwareEnforced: Map<Int, Any>  // TODO I don't like this Any
 ) {
 
 	private fun Map<Int, Any>.getAppSigningCertificates(): List<String> {
@@ -38,6 +38,9 @@ data class AttestationDetails(
 	fun getAppSigningCertificates() =
 		mergeDistinct(softwareEnforced, hardwareEnforced) { getAppSigningCertificates() }
 
+	/**
+	 *  Returns the [RootOfTrust] if present, otherwise an empty list.
+	 */
 	fun getRootOfTrust() =
 		mergeDistinct(softwareEnforced, hardwareEnforced) { getRootOfTrust() }
 
@@ -61,6 +64,6 @@ attestationChallenge: $attestationChallenge
 uniqueId: $uniqueId
 softwareEnforced: ${softwareEnforced.entries.joinToString(separator = "\n\t\t")}
 hardwareEnforced: ${hardwareEnforced.entries.joinToString(separator = "\n\t\t")}
-				""".trimIndent()
+""".trimIndent()
 	}
 }

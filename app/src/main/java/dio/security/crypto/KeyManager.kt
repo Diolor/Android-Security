@@ -109,9 +109,10 @@ class KeyManager(context: Context) {
 	/**
 	 * Retrieves the attestation certificate chain associated with the key in PEM format.
 	 */
-	fun getAttestationChainPem(): List<String> {
+	fun getAttestationChainPem(): Set<String> {
 		return keystore.getCertificateChain(keyName)
 			.map { it.toPem() }
+			.toSet()
 	}
 
 	/**

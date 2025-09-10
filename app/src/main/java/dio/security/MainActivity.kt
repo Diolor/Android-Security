@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -34,8 +33,9 @@ import dio.security.crypto.Signature.sign
 import dio.security.crypto.Signature.verify
 import dio.security.crypto.toBase64
 import dio.security.crypto.toPem
-import dio.security.ui.ClipboardText
+import dio.security.ui.AttestationSection
 import dio.security.ui.KeyAndAlgorithmDropdowns
+import dio.security.ui.SigningSection
 import dio.security.ui.VerificationButtons
 import dio.security.ui.theme.SecurityTheme
 import kotlinx.coroutines.Dispatchers
@@ -58,7 +58,7 @@ class MainActivity : ComponentActivity() {
 
 	private val keyManager = KeyManager(this)
 
-	private val appSignaturesSha256: List<String> by lazy {
+	private val appSignaturesSha256 by lazy {
 		val certs = packageManager.getPackageInfo(packageName, GET_SIGNING_CERTIFICATES)
 			.signingInfo
 			?.signingCertificateHistory
@@ -69,13 +69,16 @@ class MainActivity : ComponentActivity() {
 				val sha256 = digest.digest(signature.toByteArray())
 				sha256.joinToString(":") { b -> "%02X".format(b) }
 			}
-			?: emptyList()
+			?.toSet()
+			?: emptySet()
 	}
 
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 		enableEdgeToEdge()
-		//			getCheckAvailableKeystoreProviders()
+
+		getCheckAvailableKeystoreProviders()
+
 		setContent {
 			SecurityTheme {
 				Scaffold(
@@ -142,7 +145,6 @@ class MainActivity : ComponentActivity() {
 								}
 								// Attestation can be online tested with https://certlogik.com/decoder/
 								val attestationPemChain = remember(keyPair) { keyManager.getAttestationChainPem() }
-								println(attestationPemChain)
 								val attestationDetails = remember(keyPair) { keyManager.getAttestationDetails() }
 
 								OutlinedTextField(
@@ -175,106 +177,23 @@ class MainActivity : ComponentActivity() {
 										.fillMaxSize()
 								) {
 
-									ClipboardText(
-										header = "Cleartext",
-										textToDisplay = clearText,
-										textToCopy = clearText
-									)
-									ClipboardText(
-										header = "Public key",
-										textToDisplay = "${publicSignature.take(100)} [...]",
-										textToCopy = publicSignature
-									)
-									ClipboardText(
-										header = "Digest",
-										textToDisplay = digestText,
-										textToCopy = digestText
-									)
-									ClipboardText(
-										header = "JWT",
-										textToDisplay = jwt,
-										textToCopy = jwt
-									)
-									Text(
-										text = "Verified digest successfully against public key: $verified",
-										modifier = Modifier.padding(bottom = 16.dp),
+									SigningSection(
+										clearText = clearText,
+										publicSignature = publicSignature,
+										digestText = digestText,
+										jwt = jwt,
+										verified = verified
 									)
 
 									VerificationButtons()
 
 									HorizontalDivider()
 
-									Text(
-										text = "Key Attestation",
-										style = MaterialTheme.typography.headlineMedium,
-										modifier = Modifier.padding(vertical = 16.dp)
-									)
-
-									ClipboardText(
-										header = "Attestation challenge (base64)",
-										textToDisplay = "(Random generated but it should normally come from BE)\n$challengeText",
-										textToCopy = challengeText
-									)
-									ClipboardText(
-										header = "Attestation Certificate chain\n(PEM, leaf -> root)",
-										textToDisplay = attestationPemChain.joinToString(separator = "\n\n")
-											.take(100) + "[...]",
-										textToCopy = attestationPemChain.joinToString("\n\n")
-									)
-
-									HorizontalDivider()
-
-									Text(
-										text = "Certificate attestation details",
-										style = MaterialTheme.typography.titleMedium,
-										modifier = Modifier.padding(top = 16.dp)
-									)
-									Text(
-										text = "$attestationDetails",
-										modifier = Modifier.padding(bottom = 16.dp)
-									)
-									Text(
-										text = "Attestation challenge verified in certificate:${attestationDetails.attestationChallenge == challengeText}",
-										modifier = Modifier.padding(vertical = 16.dp)
-									)
-
-									Text(
-										text = "Hex SHA-256 digest that the app was signed with",
-										style = MaterialTheme.typography.titleMedium,
-										modifier = Modifier.padding(top = 16.dp)
-									)
-									val appSigningCertificates = attestationDetails.getAppSigningCertificates()
-									Text(
-										text = appSigningCertificates
-											.joinToString(separator = "\n"),
-										modifier = Modifier.padding(bottom = 16.dp)
-									)
-
-									attestationDetails.getRootOfTrust().forEach {
-										Text(
-											text = "Boot Hash",
-											style = MaterialTheme.typography.titleMedium,
-											modifier = Modifier.padding(top = 16.dp)
-										)
-										Text(
-											text = it.verifiedBootHash,
-										)
-										Text(
-											text = "Device locked: ${it.deviceLocked}\nVerified boot state: ${it.verifiedBootState}",
-											modifier = Modifier.padding(bottom = 16.dp)
-										)
-									}
-
-									Text(
-										text = "Attestation challenge verified in certificate:${attestationDetails.attestationChallenge == challengeText}",
-										modifier = Modifier.padding(vertical = 16.dp)
-									)
-
-									val matchesSignature =
-										appSignaturesSha256.union(appSigningCertificates).isNotEmpty()
-									Text(
-										text = "Attestation certificates match app signatures: $matchesSignature",
-										modifier = Modifier.padding(bottom = 16.dp)
+									AttestationSection(
+										challengeText = challengeText,
+										attestationPemChain = attestationPemChain,
+										attestationDetails = attestationDetails,
+										appSignaturesSha256 = appSignaturesSha256
 									)
 								}
 							}
