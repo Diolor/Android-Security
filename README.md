@@ -21,4 +21,4 @@ showcases:
     * Verifies device's integrity status (Bootloader) for the attestation (normally done in a
       server).
 
-![Screenshot](SCREENSHOT.webp)
+<img src="SCREENSHOT.webp" alt="Screenshot" width="400"/>
